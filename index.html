@@ -248,6 +248,14 @@ const UI = {
     const hot = r.primary.filter(p => p[3]);
     const main = hot[0] || r.primary[0], second = hot[1] || r.primary[1];
     if (!r.ok) return `<div class="quick-box !border-[#3a4150] !bg-[#161a21]"><span class="text-slate-400 font-semibold text-sm">Enter dimensions — result shows here</span></div>`;
+    if (r.stack) {   // Area: SF and SY are equally important → two equal halves, auto-sized numbers
+      const fit = v => { const n = v.length; return n <= 7 ? '1.5rem' : n <= 9 ? '1.3rem' : n <= 11 ? '1.12rem' : '.98rem'; };
+      const half = ([label, val, unit]) => `<div class="flex-1 min-w-0">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">${label}</div>
+        <div class="whitespace-nowrap"><span class="qv" style="font-size:${fit(val)}">${val}</span><span class="qu">${unit}</span></div></div>`;
+      return `<div class="quick-box !gap-0">${half(r.primary[0])}<div class="w-px self-stretch bg-amber-500/30 mx-3"></div>${half(r.primary[1])}
+        <span class="text-amber-400 font-bold ml-2 shrink-0" aria-hidden="true">↓</span></div>`;
+    }
     return `<div class="quick-box">
       <div class="min-w-0"><span class="qv">${main[1]}</span><span class="qu">${main[2]}</span></div>
       ${second ? `<div class="min-w-0 border-l border-amber-500/30 pl-3"><span class="qs">${second[1]}</span><span class="qu">${second[2]}</span><div class="text-[10px] text-slate-400 leading-none mt-0.5 truncate">${second[0]}</div></div>` : ''}
@@ -257,13 +265,13 @@ const UI = {
   results(r) {
     const odd = r.primary.length % 2 === 1 && r.primary.length > 1;
     const primary = r.primary.map(([label, val, unit, hot], i) => `
-      <div class="stat ${hot ? 'hot' : ''} ${odd && i === r.primary.length - 1 ? 'col-span-2' : ''}"><div class="lbl mb-1">${label}</div>
+      <div class="stat ${hot ? 'hot' : ''} ${odd && !r.stack && i === r.primary.length - 1 ? 'col-span-2' : ''}"><div class="lbl mb-1">${label}</div>
         <div class="flex items-baseline flex-wrap gap-x-2"><span class="v">${r.ok ? val : '—'}</span><span class="font-bold text-slate-400">${unit}</span></div></div>`).join('');
     const rows = (r.rows || []).map(([k, v]) => `<div class="flex justify-between gap-3 py-2 border-b border-[#262c37] last:border-0"><span class="text-slate-400">${k}</span><span class="font-bold text-right tabular-nums">${r.ok ? v : '—'}</span></div>`).join('');
     const steps = r.ok && r.steps ? `<details class="mt-3" ${r.openSteps ? 'open' : ''}><summary class="cursor-pointer text-sm font-bold text-amber-400 select-none">Show calculation</summary><div class="steps mt-2 bg-[#12151b] rounded-xl p-3 border border-[#262c37]">${r.steps.join('<br>')}</div></details>` : '';
     return `<div class="card p-4 space-y-3">
       <div class="flex items-center justify-between"><span class="lbl">Results</span><span class="text-xs text-slate-500">${r.ok ? 'live' : 'enter dimensions'}</span></div>
-      <div class="grid ${r.primary.length > 1 ? 'grid-cols-2' : ''} gap-3">${primary}</div>
+      <div class="grid ${r.primary.length > 1 && !r.stack ? 'grid-cols-2' : ''} gap-3">${primary}</div>
       ${rows ? `<div class="text-sm">${rows}</div>` : ''}${steps}
       ${r.warn ? `<div class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">${r.warn}</div>` : ''}
     </div>
@@ -318,6 +326,7 @@ const Area = {
     return {
       ok: sf > 0,
       primary: [['Square feet', fmt(sf), 'SF', true], ['Square yards', fmt(sy), 'SY', true]],
+      stack: true,
       rows: [['Square meters', fmt(sf * 0.09290304) + ' m²'], ['Acres', fmt(sf / 43560, 4)]],
       steps,
       record: { type: 'Area', title: name, inputs: inputs.join(' · '), result: `${fmt(sf)} SF · ${fmt(sy)} SY` }
